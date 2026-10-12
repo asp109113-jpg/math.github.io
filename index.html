@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>九九乘法打地鼠 - 邊玩邊學乘法</title>
+    <meta name="description" content="專為小學生設計的九九乘法練習遊戲：敲地鼠、賺分數、抽扭蛋、收集 20 種卡牌。">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --amber: #f59e0b;
+            --amber-dark: #b45309;
+            --amber-light: #fffbeb;
+            --green: #059669;
+            --green-dark: #065f46;
+            --ink: #44403c;
+            --brown: #92400e;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'Fredoka', 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+            background: var(--amber-light);
+            color: var(--ink);
+            line-height: 1.6;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .wrap { max-width: 960px; margin: 0 auto; padding: 0 1.25rem; }
+
+        /* ===== Hero ===== */
+        .hero {
+            background: linear-gradient(180deg, #fbbf24 0%, var(--amber) 100%);
+            color: #fff;
+            text-align: center;
+            padding: 2.5rem 0 0;
+            position: relative;
+            overflow: hidden;
+        }
+        .badge {
+            display: inline-block;
+            background: rgba(255,255,255,.25);
+            border: 2px solid rgba(255,255,255,.6);
+            padding: .25rem 1rem;
+            border-radius: 999px;
+            font-weight: 700;
+            font-size: .95rem;
+            margin-bottom: 1rem;
+        }
+        .hero h1 {
+            font-size: clamp(2.2rem, 9vw, 4rem);
+            font-weight: 900;
+            line-height: 1.15;
+            text-shadow: 0 3px 0 rgba(146, 64, 14, .35);
+            letter-spacing: .05em;
+        }
+        .hero p.sub {
+            margin: .75rem auto 0;
+            font-size: clamp(1.05rem, 4vw, 1.35rem);
+            font-weight: 700;
+            color: #fffbeb;
+            max-width: 32rem;
+        }
+        .cta {
+            display: inline-block;
+            margin-top: 1.75rem;
+            background: #fff;
+            color: var(--amber-dark);
+            font-weight: 900;
+            font-size: clamp(1.4rem, 6vw, 1.9rem);
+            padding: .85rem 2.5rem;
+            border-radius: 1.5rem;
+            text-decoration: none;
+            border-bottom: 6px solid #d6d3d1;
+            box-shadow: 0 8px 20px rgba(120, 53, 15, .25);
+            transition: transform .1s, border-bottom-width .1s;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        .cta:hover { transform: translateY(-2px); }
+        .cta:active { transform: translateY(4px); border-bottom-width: 2px; animation: none; }
+        .cta-note { margin-top: .75rem; font-size: .9rem; color: #fffbeb; opacity: .9; }
+        @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+
+        /* ===== Hero 圖示：題目 + 三個冒頭的地鼠 ===== */
+        .stage { margin-top: 2rem; }
+        .question {
+            display: inline-block;
+            background: #fff;
+            color: var(--amber-dark);
+            font-weight: 900;
+            font-size: clamp(1.6rem, 7vw, 2.4rem);
+            padding: .25rem 1.5rem;
+            border-radius: 1.25rem;
+            border: 4px solid #fcd34d;
+            box-shadow: 0 4px 0 rgba(146, 64, 14, .25);
+        }
+        .field {
+            background: var(--green);
+            border-top: 6px solid var(--green-dark);
+            margin-top: -1.1rem;
+            padding: 2.25rem 0 0;
+        }
+        .holes {
+            display: flex;
+            justify-content: center;
+            gap: clamp(.75rem, 5vw, 2.5rem);
+        }
+        .hole {
+            position: relative;
+            width: clamp(80px, 24vw, 120px);
+            height: clamp(80px, 24vw, 110px);
+            overflow: hidden;
+            border-radius: 50% 50% 0 0 / 60% 60% 0 0;
+            background: rgba(6, 78, 59, .45);
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+        }
+        .mole {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transform: translateY(100%);
+            animation: peek 3.6s ease-in-out infinite;
+        }
+        .hole:nth-child(2) .mole { animation-delay: 1.2s; }
+        .hole:nth-child(3) .mole { animation-delay: 2.4s; }
+        @keyframes peek {
+            0%, 10% { transform: translateY(100%); }
+            25%, 55% { transform: translateY(8%); }
+            70%, 100% { transform: translateY(100%); }
+        }
+        .head {
+            position: relative;
+            width: clamp(44px, 13vw, 64px);
+            height: clamp(44px, 13vw, 64px);
+            background: #92400e;
+            border-radius: 50% 50% 45% 45%;
+        }
+        .head::before, .head::after { /* eyes */
+            content: "";
+            position: absolute;
+            top: 32%;
+            width: 18%;
+            height: 18%;
+            background: #1c1917;
+            border-radius: 50%;
+        }
+        .head::before { left: 24%; }
+        .head::after { right: 24%; }
+        .nose {
+            position: absolute;
+            left: 50%;
+            top: 58%;
+            width: 24%;
+            height: 18%;
+            background: #fda4af;
+            border-radius: 50%;
+            transform: translateX(-50%);
+        }
+        .tag {
+            background: #fff;
+            color: var(--brown);
+            font-weight: 900;
+            font-size: clamp(1.05rem, 4.5vw, 1.4rem);
+            min-width: 3rem;
+            text-align: center;
+            padding: 0 .5rem;
+            margin-bottom: 4px;
+            border: 2px solid #d97706;
+            border-radius: .6rem;
+        }
+        .ground { height: 14px; background: var(--green-dark); }
+
+        /* ===== 區塊 ===== */
+        section { padding: 3rem 0 1rem; }
+        h2 {
+            text-align: center;
+            font-size: clamp(1.5rem, 6vw, 2rem);
+            font-weight: 900;
+            color: var(--amber-dark);
+            margin-bottom: 1.5rem;
+        }
+        .grid { display: grid; gap: 1rem; }
+        .steps { grid-template-columns: 1fr; }
+        .features { grid-template-columns: repeat(2, 1fr); }
+        @media (min-width: 720px) {
+            .steps { grid-template-columns: repeat(3, 1fr); }
+            .features { grid-template-columns: repeat(4, 1fr); }
+        }
+        .card {
+            background: #fff;
+            border: 3px solid #fde68a;
+            border-radius: 1.5rem;
+            padding: 1.25rem 1rem;
+            text-align: center;
+            box-shadow: 0 4px 0 #fde68a;
+        }
+        .card .icon { font-size: 2.4rem; line-height: 1.2; }
+        .card h3 { font-size: 1.15rem; font-weight: 900; color: var(--brown); margin: .35rem 0 .25rem; }
+        .card p { font-size: .95rem; }
+        .step-no {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 2.2rem;
+            height: 2.2rem;
+            border-radius: 50%;
+            background: var(--amber);
+            color: #fff;
+            font-weight: 900;
+        }
+
+        .bottom-cta { text-align: center; padding: 2.5rem 0 1rem; }
+        .bottom-cta .cta { background: var(--green); color: #fff; border-bottom-color: var(--green-dark); animation: none; margin-top: 0; }
+
+        .teachers {
+            background: #fff;
+            border: 3px dashed #fcd34d;
+            border-radius: 1.5rem;
+            padding: 1.25rem 1.5rem;
+            margin-top: 2.5rem;
+            font-size: .95rem;
+        }
+        .teachers h3 { font-size: 1.1rem; font-weight: 900; color: var(--brown); margin-bottom: .5rem; }
+        .teachers ul { padding-left: 1.2rem; }
+        .teachers li { margin: .25rem 0; }
+
+        footer { text-align: center; color: #a8a29e; font-size: .85rem; padding: 2rem 1rem 2.5rem; }
+
+        @media (prefers-reduced-motion: reduce) {
+            .cta, .mole { animation: none; }
+            .mole { transform: translateY(8%); }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="hero">
+        <div class="wrap">
+            <span class="badge">🏫 小學生九九乘法練習</span>
+            <h1>九九乘法<br>打地鼠</h1>
+            <p class="sub">邊玩邊學乘法 ‧ 收集 20 種可愛卡牌！</p>
+
+            <a class="cta" href="game.html">開始遊戲 🔨</a>
+            <p class="cta-note">手機、平板、電腦都可以玩</p>
+
+            <div class="stage" aria-hidden="true">
+                <div class="question">7 × 8 = ?</div>
+            </div>
+        </div>
+        <div class="field" aria-hidden="true">
+            <div class="holes">
+                <div class="hole"><div class="mole"><div class="tag">48</div><div class="head"><div class="nose"></div></div></div></div>
+                <div class="hole"><div class="mole"><div class="tag">56</div><div class="head"><div class="nose"></div></div></div></div>
+                <div class="hole"><div class="mole"><div class="tag">63</div><div class="head"><div class="nose"></div></div></div></div>
+            </div>
+        </div>
+        <div class="ground"></div>
+    </header>
+
+    <main class="wrap">
+
+        <section>
+            <h2>怎麼玩？</h2>
+            <div class="grid steps">
+                <div class="card">
+                    <span class="step-no">1</span>
+                    <div class="icon">🧐</div>
+                    <h3>看題目</h3>
+                    <p>畫面上方會出現一題乘法，例如 7 × 8。</p>
+                </div>
+                <div class="card">
+                    <span class="step-no">2</span>
+                    <div class="icon">🔨</div>
+                    <h3>敲對的地鼠</h3>
+                    <p>每隻地鼠頭上都有一個數字，快找出正確答案，點下去！</p>
+                </div>
+                <div class="card">
+                    <span class="step-no">3</span>
+                    <div class="icon">🎁</div>
+                    <h3>賺分數抽扭蛋</h3>
+                    <p>連續答對有加分，分數可以換抽獎卷，抽出可愛的卡牌。</p>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2>遊戲特色</h2>
+            <div class="grid features">
+                <div class="card">
+                    <div class="icon">🎯</div>
+                    <h3>單一數字練習</h3>
+                    <p>可以只練 2～9 其中一個乘法表，沒有時間壓力。</p>
+                </div>
+                <div class="card">
+                    <div class="icon">⏱️</div>
+                    <h3>60 秒挑戰</h3>
+                    <p>全部乘法表綜合挑戰，看看你能拿到幾分。</p>
+                </div>
+                <div class="card">
+                    <div class="icon">🐢🐇</div>
+                    <h3>三種速度</h3>
+                    <p>慢速、標準、快速，依自己的程度選擇。</p>
+                </div>
+                <div class="card">
+                    <div class="icon">🃏</div>
+                    <h3>收集 20 種卡牌</h3>
+                    <p>普通、高級、稀有，看你能不能全部集滿。</p>
+                </div>
+            </div>
+        </section>
+
+        <div class="bottom-cta">
+            <a class="cta" href="game.html">準備好了，開始！</a>
+        </div>
+
+        <div class="teachers">
+            <h3>👩‍🏫 給老師與家長</h3>
+            <ul>
+                <li>答錯時，畫面會顯示正確的算式，幫助孩子記憶。</li>
+                <li>干擾答案會包含容易混淆的數字（例如 7×8 旁邊會有 7×7、7×9），讓孩子真的在思考，而不是亂猜。</li>
+                <li>分數、抽獎卷和卡牌圖鑑會存在孩子自己的瀏覽器裡。換裝置或清除瀏覽資料後，進度會歸零。</li>
+                <li>在手機瀏覽器選「加入主畫面」，之後就能像 App 一樣一鍵開啟。</li>
+            </ul>
+        </div>
+    </main>
+
+    <footer>九九乘法打地鼠 ‧ 邊玩邊學，輕鬆記住九九乘法</footer>
+
+</body>
+</html>
