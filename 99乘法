@@ -1,0 +1,1250 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>九九乘法打地鼠 - 趣味學習與扭蛋大冒險</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body {
+            font-family: 'Fredoka', 'Noto Sans TC', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+
+        /* Custom Hammer Cursor */
+        .cursor-hammer {
+            cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 24 24' fill='%23f59e0b'><path d='M18.7 12.4l-2.1-2.1 3.5-3.5c.8-.8.8-2 0-2.8l-1.4-1.4c-.8-.8-2-.8-2.8 0l-3.5 3.5-2.1-2.1c-.4-.4-1-.4-1.4 0l-1.4 1.4c-.4.4-.4 1 0 1.4l2.1 2.1-7.3 7.3c-.8.8-.8 2 0 2.8l1.4 1.4c.8.8 2 .8 2.8 0l7.3-7.3 2.1 2.1c.4.4 1 .4 1.4 0l1.4-1.4c.4-.4.4-1 0-1.4z'/></svg>") 16 16, auto;
+        }
+
+        /* Mole Hole & Animations */
+        .dirt-hole {
+            background: linear-gradient(180deg, #5c3a21 0%, #3d2310 100%);
+            box-shadow: inset 0 8px 12px rgba(0,0,0,0.6), 0 4px 6px rgba(0,0,0,0.2);
+            border: 4px solid #8b5a2b;
+        }
+
+        .mole {
+            transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transform: translateY(100%);
+        }
+
+        .mole.up {
+            transform: translateY(10%);
+        }
+
+        .mole.whacked {
+            transform: translateY(80%) scale(0.9);
+            filter: brightness(0.7) hue-rotate(-30deg);
+        }
+
+        /* Pop Up Effect */
+        @keyframes popUpText {
+            0% { opacity: 0; transform: translate(-50%, 0) scale(0.5); }
+            50% { opacity: 1; transform: translate(-50%, -30px) scale(1.3); }
+            100% { opacity: 0; transform: translate(-50%, -60px) scale(1); }
+        }
+
+        .score-popup {
+            position: absolute;
+            left: 50%;
+            top: 20%;
+            animation: popUpText 0.8s ease-out forwards;
+            pointer-events: none;
+            z-index: 50;
+        }
+
+        /* Shake Animation */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-8px); }
+            40%, 80% { transform: translateX(8px); }
+        }
+
+        .animate-shake {
+            animation: shake 0.4s ease-in-out;
+        }
+
+        /* Gacha Machine Animation */
+        @keyframes gachaShake {
+            0%, 100% { transform: rotate(0deg); }
+            25% { transform: rotate(-6deg); }
+            75% { transform: rotate(6deg); }
+        }
+
+        .animate-gacha-shake {
+            animation: gachaShake 0.3s ease-in-out infinite;
+        }
+
+        /* Rarity Visual Themes */
+        .rarity-sr {
+            background: linear-gradient(135deg, #fef08a, #f59e0b, #d97706);
+            box-shadow: 0 0 20px rgba(245, 158, 11, 0.6);
+            border: 3px solid #fef08a;
+        }
+        .rarity-r {
+            background: linear-gradient(135deg, #e0f2fe, #3b82f6, #1d4ed8);
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+            border: 3px solid #93c5fd;
+        }
+        .rarity-n {
+            background: linear-gradient(135deg, #f3f4f6, #9ca3af, #4b5563);
+            box-shadow: 0 0 10px rgba(156, 163, 175, 0.3);
+            border: 3px solid #e5e7eb;
+        }
+
+        body { -webkit-tap-highlight-color: transparent; min-height: 100vh !important; min-height: 100dvh !important; }
+
+        /* ===== 手機版（直立）排版：目標是遊戲中不用捲動畫面 ===== */
+        @media (max-width: 639px) {
+            /* 洞的高度依螢幕高度縮放（dvh 不支援時退回 vh） */
+            .hole-cell {
+                height: clamp(6rem, 15vh, 7.5rem) !important;
+                height: clamp(6rem, 15dvh, 7.5rem) !important;
+            }
+            #panel-mode-select, #sec-gacha > div, #sec-collection > div { padding: 1rem !important; }
+            #panel-mode-select > :not([hidden]) ~ :not([hidden]) { margin-top: 1rem !important; }
+            .btn-mode { font-size: 1rem !important; padding-top: .6rem !important; padding-bottom: .6rem !important; }
+            nav button { font-size: .85rem !important; padding-top: .4rem !important; padding-bottom: .4rem !important; }
+            #timer-box { padding: .25rem .6rem !important; font-size: .85rem !important; }
+            #game-timer { font-size: 1.1rem !important; min-width: 2.2rem !important; }
+            #toast-ticket { width: max-content; max-width: 92vw; padding: .5rem 1rem; }
+            #toast-ticket span { font-size: .95rem; }
+            #btn-draw-1, #btn-draw-10 { font-size: 1rem; }
+            .btn-filter { padding-left: .6rem !important; padding-right: .6rem !important; }
+            footer { display: none; }
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-amber-50 min-h-screen text-slate-800 flex flex-col justify-between cursor-hammer selection:bg-amber-200">
+
+    <!-- TOP NAVIGATION & STATUS BAR -->
+    <header class="bg-amber-500 text-white shadow-lg sticky top-0 z-40">
+        <div class="max-w-4xl mx-auto px-3 py-2 sm:px-4 sm:py-3 flex flex-nowrap sm:flex-wrap justify-between items-center gap-2">
+            <!-- Game Title & Logo -->
+            <div class="flex items-center space-x-2 cursor-pointer" onclick="switchTab('game')">
+                <div class="bg-white text-amber-600 p-2 rounded-2xl shadow-inner text-base sm:text-xl flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10">
+                    <i class="fa-solid fa-gavel"></i>
+                </div>
+                <div>
+                    <h1 class="font-black text-base sm:text-xl leading-tight tracking-wide">九九乘法打地鼠</h1>
+                    <p class="hidden sm:block text-xs text-amber-100 font-medium">邊玩邊學乘法 ‧ 收集20種卡牌！</p>
+                </div>
+            </div>
+
+            <!-- Stats Bar -->
+            <div class="flex items-center space-x-2 sm:space-x-3 text-xs sm:text-sm">
+                <!-- Score Display -->
+                <div class="bg-amber-600/80 px-3 py-1.5 rounded-xl flex items-center space-x-1.5 border border-amber-400">
+                    <i class="fa-solid fa-star text-yellow-300 text-base"></i>
+                    <span class="hidden sm:inline font-bold">得分:</span>
+                    <span id="stat-score" class="font-black text-lg text-yellow-200">0</span>
+                </div>
+
+                <!-- Gacha Tickets -->
+                <button onclick="switchTab('gacha')" class="relative bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white px-3 py-1.5 rounded-xl font-bold flex items-center space-x-1.5 transition transform active:scale-95 shadow border border-pink-300">
+                    <i class="fa-solid fa-ticket text-yellow-300 animate-bounce"></i>
+                    <span class="hidden sm:inline">抽獎卷:</span>
+                    <span id="stat-draws" class="font-black text-base text-yellow-200">0</span>
+                    <span id="badge-draw-alert" class="hidden absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full animate-ping">!</span>
+                </button>
+
+                <!-- Mute Toggle Button -->
+                <button id="btn-sound" onclick="toggleSound()" class="bg-amber-600 hover:bg-amber-700 p-2 rounded-xl text-amber-100 transition">
+                    <i class="fa-solid fa-volume-high text-base"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <nav class="bg-amber-600 border-t border-amber-400/50">
+            <div class="max-w-4xl mx-auto flex justify-around">
+                <button id="tab-game" onclick="switchTab('game')" class="flex-1 py-2 font-bold text-center border-b-4 border-yellow-300 text-yellow-200 flex items-center justify-center space-x-1 transition">
+                    <i class="fa-solid fa-gamepad"></i>
+                    <span>挑戰遊戲</span>
+                </button>
+                <button id="tab-gacha" onclick="switchTab('gacha')" class="flex-1 py-2 font-bold text-center border-b-4 border-transparent text-amber-200 hover:text-white flex items-center justify-center space-x-1 transition">
+                    <i class="fa-solid fa-gift"></i>
+                    <span>扭蛋抽獎</span>
+                </button>
+                <button id="tab-collection" onclick="switchTab('collection')" class="flex-1 py-2 font-bold text-center border-b-4 border-transparent text-amber-200 hover:text-white flex items-center justify-center space-x-1 transition">
+                    <i class="fa-solid fa-book-open"></i>
+                    <span>收藏圖鑑 (<span id="stat-collected-count">0</span>/20)</span>
+                </button>
+            </div>
+        </nav>
+    </header>
+
+    <!-- MAIN CONTAINER -->
+    <main class="max-w-4xl mx-auto w-full px-2 py-2 sm:px-4 sm:py-6 flex-1 flex flex-col justify-center">
+
+        <!-- TAB 1: GAME SECTION -->
+        <section id="sec-game" class="block space-y-6">
+
+            <!-- MODE SELECTOR MODAL / PANEL (Visible when game not active) -->
+            <div id="panel-mode-select" class="bg-white rounded-3xl p-6 shadow-xl border-4 border-amber-200 text-center space-y-6">
+                <div class="space-y-2">
+                    <h2 class="text-2xl font-black text-amber-800 flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-bullseye text-amber-500"></i>
+                        <span>選擇乘法練習或挑戰模式</span>
+                    </h2>
+                    <div class="bg-amber-50 p-3 rounded-2xl border border-amber-200 text-sm text-slate-600 space-y-1">
+                        <p>🔹 <span class="font-bold text-sky-700">【2~9 單一數字】</span>：無限時練習模式（不累積分數與抽獎卷，適合練習）</p>
+                        <p>🌟 <span class="font-bold text-amber-700">【全綜合 🌟】</span>：1 分鐘限時挑戰模式（可累積分數與自動換取抽獎卷！）</p>
+                    </div>
+                </div>
+
+                <!-- Number Table Buttons -->
+                <div>
+                    <label class="block font-bold text-slate-700 mb-3 text-left">
+                        <i class="fa-solid fa-filter text-amber-500 mr-1"></i> 請選擇模式：
+                    </label>
+                    <div class="grid grid-cols-3 sm:grid-cols-9 gap-2">
+                        <button onclick="selectMode(2)" class="btn-mode font-bold text-lg py-3 rounded-2xl border-2 border-amber-300 bg-amber-50 hover:bg-amber-400 hover:text-white text-amber-800 transition shadow-sm" data-table="2">2 的乘法</button>
+                        <button onclick="selectMode(3)" class="btn-mode font-bold text-lg py-3 rounded-2xl border-2 border-amber-300 bg-amber-50 hover:bg-amber-400 hover:text-white text-amber-800 transition shadow-sm" data-table="3">3 的乘法</button>
+                        <button onclick="selectMode(4)" class="btn-mode font-bold text-lg py-3 rounded-2xl border-2 border-amber-300 bg-amber-50 hover:bg-amber-400 hover:text-white text-amber-800 transition shadow-sm" data-table="4">4 的乘法</button>
+                        <button onclick="selectMode(5)" class="btn-mode font-bold text-lg py-3 rounded-2xl border-2 border-amber-300 bg-amber-50 hover:bg-amber-400 hover:text-white text-amber-800 transition shadow-sm" data-table="5">5 的乘法</button>
+                        <button onclick="selectMode(6)" class="btn-mode font-bold text-lg py-3 rounded-2xl border-2 border-amber-300 bg-amber-50 hover:bg-amber-400 hover:text-white text-amber-800 transition shadow-sm" data-table="6">6 的乘法</button>
+                        <button onclick="selectMode(7)" class="btn-mode font-bold text-lg py-3 rounded-2xl border-2 border-amber-300 bg-amber-50 hover:bg-amber-400 hover:text-white text-amber-800 transition shadow-sm" data-table="7">7 的乘法</button>
+                        <button onclick="selectMode(8)" class="btn-mode font-bold text-lg py-3 rounded-2xl border-2 border-amber-300 bg-amber-50 hover:bg-amber-400 hover:text-white text-amber-800 transition shadow-sm" data-table="8">8 的乘法</button>
+                        <button onclick="selectMode(9)" class="btn-mode font-bold text-lg py-3 rounded-2xl border-2 border-amber-300 bg-amber-50 hover:bg-amber-400 hover:text-white text-amber-800 transition shadow-sm" data-table="9">9 的乘法</button>
+                        <button onclick="selectMode('all')" class="btn-mode active bg-amber-500 text-white font-bold text-lg py-3 rounded-2xl border-2 border-amber-500 hover:bg-amber-600 transition shadow-md col-span-3 sm:col-span-1" data-table="all">全綜合 🌟</button>
+                    </div>
+                </div>
+
+                <!-- Speed / Difficulty Option -->
+                <div class="flex flex-wrap justify-center items-center gap-4 bg-amber-100/50 p-4 rounded-2xl">
+                    <span class="font-bold text-slate-700">地鼠速度：</span>
+                    <label class="inline-flex items-center cursor-pointer">
+                        <input type="radio" name="speed" value="easy" class="form-radio text-amber-500 h-5 w-5">
+                        <span class="ml-2 font-bold text-slate-600">慢速 (輕鬆)</span>
+                    </label>
+                    <label class="inline-flex items-center cursor-pointer">
+                        <input type="radio" name="speed" value="normal" checked class="form-radio text-amber-500 h-5 w-5">
+                        <span class="ml-2 font-bold text-slate-600">標準 (推薦)</span>
+                    </label>
+                    <label class="inline-flex items-center cursor-pointer">
+                        <input type="radio" name="speed" value="hard" class="form-radio text-amber-500 h-5 w-5">
+                        <span class="ml-2 font-bold text-slate-600">快速 (高手)</span>
+                    </label>
+                </div>
+
+                <!-- Start Game Button -->
+                <button onclick="startGame()" class="w-full sm:w-2/3 mx-auto py-4 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-black text-2xl rounded-2xl shadow-lg border-b-4 border-green-700 transform hover:-translate-y-1 transition active:translate-y-0 flex items-center justify-center space-x-3">
+                    <i class="fa-solid fa-play"></i>
+                    <span>開始打了！</span>
+                </button>
+            </div>
+
+            <!-- ACTIVE GAME ARENA (Hidden by default) -->
+            <div id="panel-game-arena" class="hidden space-y-2 sm:space-y-4">
+                
+                <!-- Question Banner & Game Control Bar -->
+                <div class="bg-white rounded-3xl p-2 sm:p-4 shadow-lg border-4 border-amber-300 flex flex-wrap md:flex-nowrap items-center justify-between gap-2 sm:gap-4">
+                    <!-- Mode badge & Timer -->
+                    <div class="flex items-center space-x-2 sm:space-x-3 order-1 md:order-none">
+                        <span id="badge-current-mode" class="hidden sm:inline-block bg-amber-100 text-amber-800 px-3 py-1.5 rounded-full font-bold text-sm border border-amber-300">模式: 全綜合</span>
+                        
+                        <!-- Dynamic Timer Box -->
+                        <div id="timer-box" class="bg-rose-500 text-white px-3.5 py-1.5 rounded-2xl font-black text-base flex items-center space-x-1.5 shadow-md border border-rose-400">
+                            <i class="fa-solid fa-clock text-yellow-300 animate-spin"></i>
+                            <span id="timer-label">剩餘:</span>
+                            <span id="game-timer" class="text-xl text-yellow-200 min-w-[2.5rem] text-center">60s</span>
+                        </div>
+
+                        <button onclick="stopGame()" class="text-xs bg-slate-200 hover:bg-slate-300 text-slate-600 font-bold px-3 py-1.5 rounded-full transition cursor-pointer">
+                            <i class="fa-solid fa-rotate-left mr-1"></i>結束
+                        </button>
+                    </div>
+
+                    <!-- Target Question Box -->
+                    <div class="bg-amber-500 text-white px-4 sm:px-8 py-1.5 sm:py-2.5 rounded-2xl shadow-inner border-2 border-amber-300 flex items-center justify-center space-x-3 order-3 md:order-none w-full md:w-auto">
+                        <span class="text-amber-200 text-sm font-bold uppercase tracking-wider">題目:</span>
+                        <span id="question-text" class="font-black text-3xl sm:text-4xl tracking-wider text-yellow-200 animate-pulse">7 × 8 = ?</span>
+                    </div>
+
+                    <!-- Continuous Streak Counter -->
+                    <div class="flex items-center space-x-2 bg-orange-50 px-3 sm:px-4 py-1 sm:py-1.5 rounded-2xl border border-orange-200 order-2 md:order-none">
+                        <i class="fa-solid fa-fire text-orange-500 text-xl"></i>
+                        <div class="text-left">
+                            <div class="text-xs text-slate-400 font-bold">連對 Combo</div>
+                            <div id="combo-count" class="text-lg font-black text-orange-600 leading-none">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 答錯時顯示正確算式（固定保留空間，避免畫面跳動） -->
+                <div class="h-8 sm:h-11 flex items-center justify-center">
+                    <div id="feedback-banner" class="opacity-0 transition-opacity duration-200 bg-rose-100 text-rose-700 border-2 border-rose-300 font-black text-base sm:text-xl px-4 sm:px-5 py-0.5 sm:py-1 rounded-2xl shadow">
+                        <i class="fa-solid fa-lightbulb text-amber-500 mr-1"></i>正確答案：<span id="feedback-text"></span>
+                    </div>
+                </div>
+
+                <!-- 3x3 Mole Holes Grid Container -->
+                <div class="relative bg-emerald-600 p-2 sm:p-6 rounded-3xl shadow-2xl border-4 border-emerald-800">
+                    <div class="absolute inset-0 bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:16px_16px] opacity-30 pointer-events-none rounded-3xl"></div>
+
+                    <!-- Floating Score Notification Layer -->
+                    <div id="score-popup-layer" class="absolute inset-0 pointer-events-none overflow-hidden z-30"></div>
+
+                    <!-- Grid -->
+                    <div class="grid grid-cols-3 gap-2 sm:gap-6 relative z-10">
+                        <script>
+                            for(let i=0; i<9; i++){
+                                document.write(`
+                                <div class="relative flex flex-col items-center justify-end hole-cell h-28 sm:h-36 overflow-hidden rounded-full border-b-8 border-emerald-900 bg-emerald-800/40 p-1">
+                                    <div class="dirt-hole absolute bottom-0 w-full h-14 sm:h-20 rounded-full z-0"></div>
+
+                                    <div id="mole-${i}" onclick="whackMole(${i})" class="mole relative z-10 cursor-pointer flex flex-col items-center select-none w-16 sm:w-28">
+                                        <div class="relative bg-amber-800 w-14 sm:w-20 h-14 sm:h-20 rounded-t-full border-2 border-amber-900 shadow-md flex flex-col items-center justify-start pt-2">
+                                            <div class="flex space-x-2 mb-1">
+                                                <div class="w-2.5 h-2.5 bg-black rounded-full border border-white"></div>
+                                                <div class="w-2.5 h-2.5 bg-black rounded-full border border-white"></div>
+                                            </div>
+                                            <div class="w-5 h-3 bg-pink-300 rounded-full border border-pink-400"></div>
+                                            <div class="absolute top-6 left-1 w-2.5 h-2.5 bg-red-400/50 rounded-full"></div>
+                                            <div class="absolute top-6 right-1 w-2.5 h-2.5 bg-red-400/50 rounded-full"></div>
+                                        </div>
+
+                                        <div class="bg-yellow-100 text-slate-900 font-black text-xl sm:text-2xl px-2 py-0.5 sm:py-1 rounded-lg border-2 border-amber-600 shadow-md transform -translate-y-2 z-20 min-w-[3.5rem] text-center">
+                                            <span id="mole-val-${i}">0</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                `);
+                            }
+                        </script>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 2: GACHA SECTION -->
+        <section id="sec-gacha" class="hidden space-y-6">
+            <div class="bg-white rounded-3xl p-6 shadow-xl border-4 border-pink-200 text-center space-y-6 relative overflow-hidden">
+                <div class="absolute -top-10 -left-10 w-32 h-32 bg-pink-100 rounded-full filter blur-xl opacity-70"></div>
+                <div class="absolute -bottom-10 -right-10 w-32 h-32 bg-purple-100 rounded-full filter blur-xl opacity-70"></div>
+
+                <div class="relative z-10 space-y-2">
+                    <h2 class="text-3xl font-black text-pink-600 flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-gift text-pink-500"></i>
+                        <span>乘法大師扭蛋機</span>
+                    </h2>
+                    <p class="text-slate-500 text-sm">每累積 100 分可免費換 1 張抽獎卷！收集 20 種精美地鼠卡牌與珍貴道具！</p>
+                </div>
+
+                <!-- Gacha Machine Visual Display -->
+                <div class="relative max-w-xs mx-auto my-4">
+                    <div id="gacha-machine-body" class="bg-gradient-to-b from-red-500 via-pink-500 to-red-600 p-6 rounded-t-full rounded-b-3xl border-4 border-red-700 shadow-2xl relative">
+                        <div class="bg-sky-100/30 border-4 border-white/60 rounded-full h-48 w-48 mx-auto flex items-center justify-center relative overflow-hidden shadow-inner backdrop-blur-sm">
+                            <div class="absolute top-8 left-6 w-10 h-10 rounded-full bg-gradient-to-tr from-yellow-400 to-orange-400 border-2 border-white shadow"></div>
+                            <div class="absolute top-12 right-8 w-10 h-10 rounded-full bg-gradient-to-tr from-blue-400 to-indigo-500 border-2 border-white shadow"></div>
+                            <div class="absolute bottom-8 left-10 w-10 h-10 rounded-full bg-gradient-to-tr from-green-400 to-emerald-500 border-2 border-white shadow"></div>
+                            <div class="absolute bottom-6 right-8 w-10 h-10 rounded-full bg-gradient-to-tr from-purple-400 to-pink-500 border-2 border-white shadow"></div>
+                            <div class="absolute top-20 left-16 w-12 h-12 rounded-full bg-gradient-to-tr from-amber-300 to-yellow-500 border-2 border-white shadow animate-pulse"></div>
+                        </div>
+
+                        <!-- Knob -->
+                        <div class="mt-4 bg-slate-200 border-2 border-slate-400 rounded-2xl p-3 w-32 mx-auto shadow-inner flex flex-col items-center">
+                            <div id="gacha-knob" class="w-12 h-4 bg-red-600 rounded-full border-2 border-red-800 shadow cursor-pointer transform transition-transform duration-500"></div>
+                            <div class="text-[10px] font-bold text-slate-500 mt-1">TURN HERE</div>
+                        </div>
+
+                        <!-- Exit Slot -->
+                        <div class="mt-3 bg-slate-900 rounded-xl h-10 w-20 mx-auto border-2 border-slate-700 flex items-center justify-center">
+                            <div id="capsule-exit-zone" class="relative"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Draw Action Buttons -->
+                <div class="space-y-3 relative z-10">
+                    <div class="text-sm font-bold text-slate-600">
+                        剩餘可抽獎次數: <span id="gacha-spins-count" class="text-pink-600 font-black text-xl">0</span> 次
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row justify-center items-center gap-3">
+                        <button onclick="playGacha(1)" id="btn-draw-1" class="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-pink-500 to-rose-600 hover:from-pink-600 hover:to-rose-700 text-white font-black text-lg rounded-2xl shadow-lg border-b-4 border-rose-800 transition transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer">
+                            <i class="fa-solid fa-dice mr-1"></i> 抽獎 1 次 (1張)
+                        </button>
+                        <button onclick="playGacha(10)" id="btn-draw-10" class="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-black text-lg rounded-2xl shadow-lg border-b-4 border-indigo-900 transition transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer">
+                            <i class="fa-solid fa-wand-magic-sparkles mr-1 text-yellow-300"></i> 優惠 10 連抽 (只需 9 張! 🎉)
+                        </button>
+                    </div>
+
+                    <div class="text-xs text-slate-400 pt-2">
+                        機率公示：SR 稀有 (5%) ｜ R 高級 (30%) ｜ N 普通 (65%) ‧ 獎品會重複抽中以收集數量！
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 3: COLLECTION SECTION -->
+        <section id="sec-collection" class="hidden space-y-6">
+            <div class="bg-white rounded-3xl p-6 shadow-xl border-4 border-amber-200 space-y-6">
+                <!-- Header -->
+                <div class="flex flex-col sm:flex-row justify-between items-center gap-4 border-b border-slate-100 pb-4">
+                    <div>
+                        <h2 class="text-2xl font-black text-amber-800 flex items-center space-x-2">
+                            <i class="fa-solid fa-book-open text-amber-500"></i>
+                            <span>卡牌圖鑑收集手冊</span>
+                        </h2>
+                        <p class="text-slate-500 text-xs">抽到的所有禮物都會在此解鎖與累積數量！</p>
+                    </div>
+
+                    <!-- Progress Bar -->
+                    <div class="w-full sm:w-48 bg-slate-100 rounded-full h-5 p-1 border border-slate-200 relative">
+                        <div id="collection-progress-bar" class="bg-gradient-to-r from-amber-400 to-amber-500 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
+                        <span id="collection-progress-text" class="absolute inset-0 text-[10px] font-black text-slate-700 flex items-center justify-center">0%</span>
+                    </div>
+                </div>
+
+                <!-- Category Filters -->
+                <div class="flex space-x-2">
+                    <button onclick="filterCollection('all')" class="btn-filter active bg-amber-500 text-white font-bold px-4 py-1.5 rounded-xl text-sm transition cursor-pointer">全部 (20)</button>
+                    <button onclick="filterCollection('SR')" class="btn-filter bg-slate-100 text-slate-600 hover:bg-slate-200 font-bold px-4 py-1.5 rounded-xl text-sm transition cursor-pointer">SR 稀有</button>
+                    <button onclick="filterCollection('R')" class="btn-filter bg-slate-100 text-slate-600 hover:bg-slate-200 font-bold px-4 py-1.5 rounded-xl text-sm transition cursor-pointer">R 高級</button>
+                    <button onclick="filterCollection('N')" class="btn-filter bg-slate-100 text-slate-600 hover:bg-slate-200 font-bold px-4 py-1.5 rounded-xl text-sm transition cursor-pointer">N 普通</button>
+                </div>
+
+                <!-- Prize Grid -->
+                <div id="collection-grid" class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-3">
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="bg-amber-100 border-t border-amber-200 py-3 text-center text-xs text-amber-800 font-medium">
+        九九乘法打地鼠 ‧ 快樂學習 ‧ 腦力大作戰
+    </footer>
+
+    <!-- AUTO TICKET CONVERSION TOAST BANNER -->
+    <div id="toast-ticket" class="fixed top-20 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-pink-500 to-purple-600 text-white font-black px-6 py-3 rounded-full shadow-2xl border-2 border-yellow-300 flex items-center space-x-2 z-50 transition-all duration-300 -translate-y-20 opacity-0 pointer-events-none">
+        <i class="fa-solid fa-ticket text-yellow-300 text-2xl animate-bounce"></i>
+        <span class="text-lg">滿 100 分！已自動換成 1 張抽獎卷！🎉</span>
+    </div>
+
+    <!-- GAME OVER SUMMARY MODAL -->
+    <div id="modal-game-over" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 text-center space-y-5 shadow-2xl border-4 border-amber-400 transform transition-all scale-95 opacity-0" id="modal-summary-card">
+            <div class="text-4xl">⏳ Time's Up!</div>
+            <h2 class="text-3xl font-black text-amber-800">1 分鐘挑戰結束！</h2>
+
+            <div class="bg-amber-50 rounded-2xl p-4 border-2 border-amber-200 space-y-3">
+                <div class="flex justify-between items-center text-lg border-b border-amber-200 pb-2">
+                    <span class="font-bold text-slate-600">本輪獲得分數：</span>
+                    <span id="summary-round-score" class="font-black text-2xl text-amber-600">+0</span>
+                </div>
+                <div class="flex justify-between items-center text-lg border-b border-amber-200 pb-2">
+                    <span class="font-bold text-slate-600">最高連對 Combo：</span>
+                    <span id="summary-max-combo" class="font-black text-2xl text-orange-500">0</span>
+                </div>
+                <div class="flex justify-between items-center text-lg">
+                    <span class="font-bold text-slate-600">獲得抽獎卷：</span>
+                    <span id="summary-tickets-earned" class="font-black text-2xl text-pink-600">0 張 🎟️</span>
+                </div>
+            </div>
+
+            <div class="flex space-x-3">
+                <button onclick="closeSummaryModal(); startGame();" class="flex-1 py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-black text-lg rounded-2xl shadow-md transition cursor-pointer">
+                    <i class="fa-solid fa-rotate-right mr-1"></i> 再玩一次
+                </button>
+                <button onclick="closeSummaryModal(); switchTab('gacha');" class="flex-1 py-3 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-black text-lg rounded-2xl shadow-md transition cursor-pointer">
+                    <i class="fa-solid fa-gift mr-1"></i> 前往抽獎
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- GACHA RESULT MODAL POPUP -->
+    <div id="modal-gacha-result" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-lg w-full p-6 text-center space-y-4 shadow-2xl border-4 border-amber-300 transform transition-all scale-95 opacity-0 max-h-[90vh] overflow-y-auto" id="modal-gacha-card">
+            <div id="result-modal-title" class="text-sm font-bold text-slate-400 tracking-widest uppercase">恭喜獲得！</div>
+
+            <div id="gacha-results-container" class="py-2">
+            </div>
+
+            <button onclick="closeGachaModal()" class="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white font-black text-lg rounded-2xl shadow-md transition cursor-pointer">
+                收下獎品
+            </button>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // WEB AUDIO SYNTHESIZER FOR SOUND EFFECTS
+        class SoundSynth {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+
+            playHit() {
+                if (this.muted) return;
+                this.init();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(800, this.ctx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.15);
+            }
+
+            playMiss() {
+                if (this.muted) return;
+                this.init();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(200, this.ctx.currentTime);
+                osc.frequency.linearRampToValueAtTime(100, this.ctx.currentTime + 0.2);
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.2);
+            }
+
+            playGachaSpin() {
+                if (this.muted) return;
+                this.init();
+                for (let i = 0; i < 5; i++) {
+                    setTimeout(() => {
+                        const osc = this.ctx.createOscillator();
+                        const gain = this.ctx.createGain();
+                        osc.frequency.setValueAtTime(300 + i * 100, this.ctx.currentTime);
+                        gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+                        gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.08);
+                        osc.connect(gain);
+                        gain.connect(this.ctx.destination);
+                        osc.start();
+                        osc.stop(this.ctx.currentTime + 0.08);
+                    }, i * 70);
+                }
+            }
+
+            playWinSR() {
+                if (this.muted) return;
+                this.init();
+                const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+                notes.forEach((freq, idx) => {
+                    setTimeout(() => {
+                        const osc = this.ctx.createOscillator();
+                        const gain = this.ctx.createGain();
+                        osc.type = 'triangle';
+                        osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                        gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
+                        osc.connect(gain);
+                        gain.connect(this.ctx.destination);
+                        osc.start();
+                        osc.stop(this.ctx.currentTime + 0.3);
+                    }, idx * 100);
+                });
+            }
+
+            playTicketUnlock() {
+                if (this.muted) return;
+                this.init();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(587.33, this.ctx.currentTime); // D5
+                osc.frequency.exponentialRampToValueAtTime(880, this.ctx.currentTime + 0.25); // A5
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.25);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.25);
+            }
+        }
+
+        const audio = new SoundSynth();
+
+        function toggleSound() {
+            audio.muted = !audio.muted;
+            const btn = document.getElementById('btn-sound');
+            if (audio.muted) {
+                btn.innerHTML = '<i class="fa-solid fa-volume-xmark text-base"></i>';
+                btn.classList.add('bg-slate-500');
+            } else {
+                btn.innerHTML = '<i class="fa-solid fa-volume-high text-base"></i>';
+                btn.classList.remove('bg-slate-500');
+            }
+        }
+
+        // 20 PRIZE COLLECTIBLES DATA REGISTRY
+        const PRIZES = [
+            // SR Tier (3 items, Rate ~ 5%)
+            { id: 1, name: "皇冠地鼠王", rarity: "SR", icon: "👑", desc: "地鼠王國的尊貴統治者！" },
+            { id: 2, name: "黃金神鎚", rarity: "SR", icon: "🔨", desc: "揮舞時閃耀著傳說中的金色光芒！" },
+            { id: 3, name: "彩虹獨角地鼠", rarity: "SR", icon: "🌈", desc: "傳說中帶來極致好運的夢幻地鼠！" },
+
+            // R Tier (7 items, Rate ~ 30%)
+            { id: 4, name: "忍者地鼠", rarity: "R", icon: "🥷", desc: "身手敏捷，來無影去無蹤！" },
+            { id: 5, name: "廚師地鼠", rarity: "R", icon: "👨‍🍳", desc: "精通各式乘法美味佳餚！" },
+            { id: 6, name: "火箭地鼠", rarity: "R", icon: "🚀", desc: "解題速度快如火箭升空！" },
+            { id: 7, name: "魔法師地鼠", rarity: "R", icon: "🧙‍♂️", desc: "會施展讓乘法變簡單的魔法！" },
+            { id: 8, name: "偵探地鼠", rarity: "R", icon: "🕵️", desc: "眼尖手快，任何題目都難不倒！" },
+            { id: 9, name: "機器地鼠", rarity: "R", icon: "🤖", desc: "計算精密，絕不犯錯的超級電腦！" },
+            { id: 10, name: "畫家地鼠", rarity: "R", icon: "🎨", desc: "揮灑繽紛色彩的美術大師！" },
+
+            // N Tier (10 items, Rate ~ 65%)
+            { id: 11, name: "眼鏡地鼠", rarity: "N", icon: "👓", desc: "看書最認真的小聰明！" },
+            { id: 12, name: "西瓜地鼠", rarity: "N", icon: "🍉", desc: "最喜歡在夏天吃甜甜西瓜！" },
+            { id: 13, name: "耳機地鼠", rarity: "N", icon: "🎧", desc: "邊聽音樂邊練習九九乘法！" },
+            { id: 14, name: "書包地鼠", rarity: "N", icon: "🎒", desc: "背著滿滿知識的乖學生！" },
+            { id: 15, name: "向日葵地鼠", rarity: "N", icon: "🌻", desc: "陽光又充滿朝氣的小朋友！" },
+            { id: 16, name: "睡覺地鼠", rarity: "N", icon: "💤", desc: "答對題目後就要補個小眠～" },
+            { id: 17, name: "足球地鼠", rarity: "N", icon: "⚽", desc: "熱愛運動與熱血競賽！" },
+            { id: 18, name: "冰淇淋地鼠", rarity: "N", icon: "🍦", desc: "甜蜜冰涼的好滋味！" },
+            { id: 19, name: "氣球地鼠", rarity: "N", icon: "🎈", desc: "飛向天空的夢想氣球！" },
+            { id: 20, name: "貓耳地鼠", rarity: "N", icon: "🐱", desc: "戴著貓耳帽子的可愛裝扮！" }
+        ];
+
+        /* GAME STATE VARIABLES */
+        let state = {
+            score: 0,
+            tickets: 0,
+            pointsProgress: 0,
+            selectedTable: 'all',
+            currentSpeed: 'normal',
+            gameActive: false,
+            currentQuestion: { num1: 0, num2: 0, answer: 0 },
+            combo: 0,
+            maxCombo: 0,
+            roundScore: 0,
+            roundTicketsEarned: 0,
+            timeLeft: 60,
+            timerInterval: null,
+            inventory: {},
+            activeMoles: Array(9).fill(null),
+            moleTimer: null
+        };
+
+        window.onload = function() {
+            loadSavedData();
+            updateStatsUI();
+            renderCollectionGrid('all');
+        };
+
+        function saveData() {
+            localStorage.setItem('multiplication_mole_data', JSON.stringify({
+                score: state.score,
+                tickets: state.tickets,
+                pointsProgress: state.pointsProgress,
+                inventory: state.inventory
+            }));
+        }
+
+        function loadSavedData() {
+            const data = localStorage.getItem('multiplication_mole_data');
+            if (data) {
+                try {
+                    const parsed = JSON.parse(data);
+                    state.score = parsed.score || 0;
+                    state.tickets = parsed.tickets || 0;
+                    state.pointsProgress = parsed.pointsProgress || 0;
+                    state.inventory = parsed.inventory || {};
+                } catch(e) {
+                    console.error("Save load error", e);
+                }
+            }
+        }
+
+        function switchTab(tabName) {
+            document.getElementById('sec-game').classList.add('hidden');
+            document.getElementById('sec-gacha').classList.add('hidden');
+            document.getElementById('sec-collection').classList.add('hidden');
+
+            document.querySelectorAll('nav button').forEach(btn => {
+                btn.classList.remove('border-yellow-300', 'text-yellow-200');
+                btn.classList.add('border-transparent', 'text-amber-200');
+            });
+
+            if (tabName === 'game') {
+                document.getElementById('sec-game').classList.remove('hidden');
+                document.getElementById('tab-game').classList.add('border-yellow-300', 'text-yellow-200');
+            } else if (tabName === 'gacha') {
+                document.getElementById('sec-gacha').classList.remove('hidden');
+                document.getElementById('tab-gacha').classList.add('border-yellow-300', 'text-yellow-200');
+            } else if (tabName === 'collection') {
+                document.getElementById('sec-collection').classList.remove('hidden');
+                document.getElementById('tab-collection').classList.add('border-yellow-300', 'text-yellow-200');
+                renderCollectionGrid('all');
+            }
+        }
+
+        function selectMode(table) {
+            state.selectedTable = table;
+            document.querySelectorAll('.btn-mode').forEach(btn => {
+                btn.classList.remove('active', 'bg-amber-500', 'text-white', 'border-amber-500');
+                btn.classList.add('bg-amber-50', 'text-amber-800', 'border-amber-300');
+            });
+            const selectedBtn = document.querySelector(`.btn-mode[data-table="${table}"]`);
+            if (selectedBtn) {
+                selectedBtn.classList.remove('bg-amber-50', 'text-amber-800', 'border-amber-300');
+                selectedBtn.classList.add('active', 'bg-amber-500', 'text-white', 'border-amber-500');
+            }
+        }
+
+        function startGame() {
+            const speedRadios = document.getElementsByName('speed');
+            for(let r of speedRadios) {
+                if(r.checked) state.currentSpeed = r.value;
+            }
+
+            state.gameActive = true;
+            state.combo = 0;
+            state.maxCombo = 0;
+            state.roundScore = 0;
+            state.roundTicketsEarned = 0;
+
+            document.getElementById('combo-count').innerText = '0';
+
+            document.getElementById('panel-mode-select').classList.add('hidden');
+            document.getElementById('panel-game-arena').classList.remove('hidden');
+
+            const isChallenge = (state.selectedTable === 'all');
+            const modeLabel = isChallenge ? '全綜合 (1~9 挑戰)' : `${state.selectedTable} 的乘法 (練習)`;
+            document.getElementById('badge-current-mode').innerText = `模式: ${modeLabel}`;
+
+            const timerBox = document.getElementById('timer-box');
+            const timerLabel = document.getElementById('timer-label');
+            const timerText = document.getElementById('game-timer');
+
+            if (isChallenge) {
+                state.timeLeft = 60;
+                timerBox.className = 'bg-rose-500 text-white px-3.5 py-1.5 rounded-2xl font-black text-base flex items-center space-x-1.5 shadow-md border border-rose-400';
+                timerLabel.innerText = '剩餘:';
+                timerText.innerText = '60s';
+                startCountdownTimer();
+            } else {
+                clearInterval(state.timerInterval);
+                timerBox.className = 'bg-sky-500 text-white px-3.5 py-1.5 rounded-2xl font-black text-base flex items-center space-x-1.5 shadow-md border border-sky-400';
+                timerLabel.innerText = '練習模式:';
+                timerText.innerText = '無限時 ♾️';
+            }
+
+            generateNextQuestion();
+            startMoleCycle();
+        }
+
+        function stopGame() {
+            state.gameActive = false;
+            clearInterval(state.timerInterval);
+            clearInterval(state.moleTimer);
+            hideAllMoles();
+            document.getElementById('panel-game-arena').classList.add('hidden');
+            document.getElementById('panel-mode-select').classList.remove('hidden');
+        }
+
+        function startCountdownTimer() {
+            clearInterval(state.timerInterval);
+            state.timerInterval = setInterval(() => {
+                if (!state.gameActive) return;
+
+                state.timeLeft--;
+                document.getElementById('game-timer').innerText = `${state.timeLeft}s`;
+
+                if (state.timeLeft <= 0) {
+                    endGameRound();
+                }
+            }, 1000);
+        }
+
+        function endGameRound() {
+            state.gameActive = false;
+            clearInterval(state.timerInterval);
+            clearInterval(state.moleTimer);
+            hideAllMoles();
+
+            document.getElementById('summary-round-score').innerText = `+${state.roundScore}`;
+            document.getElementById('summary-max-combo').innerText = state.maxCombo;
+            document.getElementById('summary-tickets-earned').innerText = `${state.roundTicketsEarned} 張 🎟️`;
+
+            const modal = document.getElementById('modal-game-over');
+            const card = document.getElementById('modal-summary-card');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                card.classList.remove('scale-95', 'opacity-0');
+                card.classList.add('scale-100', 'opacity-100');
+            }, 10);
+        }
+
+        function closeSummaryModal() {
+            const modal = document.getElementById('modal-game-over');
+            const card = document.getElementById('modal-summary-card');
+            card.classList.remove('scale-100', 'opacity-100');
+            card.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 200);
+        }
+
+        function generateNextQuestion() {
+            let num1, num2;
+            if (state.selectedTable === 'all') {
+                num1 = Math.floor(Math.random() * 8) + 2;
+            } else {
+                num1 = parseInt(state.selectedTable);
+            }
+            num2 = Math.floor(Math.random() * 9) + 1;
+            const answer = num1 * num2;
+            state.currentQuestion = { num1, num2, answer };
+            document.getElementById('question-text').innerText = `${num1} × ${num2} = ?`;
+            hideFeedback();
+        }
+
+        // 答錯時顯示正確算式，約 2.5 秒後自動消失
+        let feedbackTimer = null;
+        function showWrongFeedback() {
+            const q = state.currentQuestion;
+            document.getElementById('feedback-text').innerText = `${q.num1} × ${q.num2} = ${q.answer}`;
+            document.getElementById('feedback-banner').classList.remove('opacity-0');
+            clearTimeout(feedbackTimer);
+            feedbackTimer = setTimeout(hideFeedback, 2500);
+        }
+
+        function hideFeedback() {
+            clearTimeout(feedbackTimer);
+            const banner = document.getElementById('feedback-banner');
+            if (banner) banner.classList.add('opacity-0');
+        }
+
+        function startMoleCycle() {
+            clearInterval(state.moleTimer);
+            popMoles();
+            let speedMs = 2000;
+            if (state.currentSpeed === 'easy') speedMs = 2800;
+            if (state.currentSpeed === 'hard') speedMs = 1200;
+
+            state.moleTimer = setInterval(() => {
+                if (state.gameActive) {
+                    popMoles();
+                }
+            }, speedMs);
+        }
+
+        function hideAllMoles() {
+            for (let i = 0; i < 9; i++) {
+                const m = document.getElementById(`mole-${i}`);
+                if (m) {
+                    m.classList.remove('up', 'whacked');
+                }
+            }
+        }
+
+        function shuffleArray(arr) {
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        // 產生干擾答案：一部分是「容易混淆的接近答案」（例如 7×8 → 7×7=49、7×9=63、6×8=48），
+        // 其餘是隨機的九九乘法結果。所有數字都不重複，也不會等於正確答案。
+        function buildDistractors(n, num1, num2, ans) {
+            const used = new Set([ans]);
+            const result = [];
+            const inRange = v => v >= 1 && v <= 9;
+
+            // 近似答案比例：慢速較少、快速較多（可自行調整）
+            const nearRatio = { easy: 0.3, normal: 0.5, hard: 0.6 }[state.currentSpeed] ?? 0.5;
+            const nearTarget = Math.max(1, Math.round(n * nearRatio));
+
+            // 先放 ±1 的（最容易混淆），再放 ±2 的，各組內隨機排序
+            const near1 = [[num1, num2 - 1], [num1, num2 + 1], [num1 - 1, num2], [num1 + 1, num2]];
+            const near2 = [[num1, num2 - 2], [num1, num2 + 2], [num1 - 2, num2], [num1 + 2, num2]];
+            const nearPairs = [...shuffleArray(near1), ...shuffleArray(near2)];
+
+            for (const [a, b] of nearPairs) {
+                if (result.length >= nearTarget) break;
+                if (!inRange(a) || !inRange(b)) continue;
+                const v = a * b;
+                if (used.has(v)) continue;
+                used.add(v);
+                result.push(v);
+            }
+
+            // 其餘用隨機九九乘法結果補滿
+            let guard = 0;
+            while (result.length < n && guard < 200) {
+                guard++;
+                const v = (Math.floor(Math.random() * 8) + 2) * (Math.floor(Math.random() * 9) + 1);
+                if (used.has(v)) continue;
+                used.add(v);
+                result.push(v);
+            }
+
+            return shuffleArray(result);
+        }
+
+        // 依速度決定同時冒出的地鼠數量（共 9 個洞）。想調整數量可改這裡 [最少, 最多]
+        function getMoleCount() {
+            const ranges = {
+                easy:   [3, 4],
+                normal: [4, 6],
+                hard:   [5, 7]
+            };
+            const [min, max] = ranges[state.currentSpeed] || ranges.normal;
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        function popMoles() {
+            hideAllMoles();
+
+            const count = getMoleCount();
+            const indices = [];
+            while (indices.length < count) {
+                const r = Math.floor(Math.random() * 9);
+                if (!indices.includes(r)) indices.push(r);
+            }
+
+            const correctHole = indices[Math.floor(Math.random() * indices.length)];
+            const ans = state.currentQuestion.answer;
+            const { num1, num2 } = state.currentQuestion;
+            const distractors = buildDistractors(count - 1, num1, num2, ans);
+
+            indices.forEach(idx => {
+                let val;
+                if (idx === correctHole) {
+                    val = ans;
+                } else {
+                    val = distractors.pop();
+                }
+                state.activeMoles[idx] = val;
+                document.getElementById(`mole-val-${idx}`).innerText = val;
+
+                const moleEl = document.getElementById(`mole-${idx}`);
+                if (moleEl) {
+                    moleEl.classList.remove('whacked');
+                    void moleEl.offsetWidth;
+                    moleEl.classList.add('up');
+                }
+            });
+        }
+
+        function whackMole(holeIndex) {
+            if(!state.gameActive) return;
+
+            const moleEl = document.getElementById(`mole-${holeIndex}`);
+            if(!moleEl.classList.contains('up') || moleEl.classList.contains('whacked')) return;
+
+            const whackedVal = state.activeMoles[holeIndex];
+
+            moleEl.classList.add('whacked');
+
+            if(whackedVal === state.currentQuestion.answer) {
+                audio.playHit();
+                state.combo += 1;
+                if(state.combo > state.maxCombo) state.maxCombo = state.combo;
+
+                if (state.selectedTable === 'all') {
+                    state.score += 10;
+                    state.roundScore += 10;
+                    
+                    state.pointsProgress += 10;
+                    if (state.pointsProgress >= 100) {
+                        state.pointsProgress -= 100;
+                        state.tickets += 1;
+                        state.roundTicketsEarned += 1;
+                        audio.playTicketUnlock();
+                        triggerTicketToast();
+                    }
+
+                    showScorePopup(holeIndex, '+10', 'text-yellow-300');
+                } else {
+                    showScorePopup(holeIndex, '答對！🌟', 'text-emerald-300');
+                }
+
+                updateStatsUI();
+                saveData();
+
+                setTimeout(() => {
+                    if (!state.gameActive) return; // 時間到或已結束就不要再冒地鼠
+                    generateNextQuestion();
+                    startMoleCycle(); // 重新計時，新地鼠才有完整的停留時間
+                }, 250);
+
+            } else {
+                audio.playMiss();
+                state.combo = 0;
+                document.getElementById('combo-count').innerText = '0';
+                
+                showScorePopup(holeIndex, 'X 答錯', 'text-red-400');
+                showWrongFeedback();
+
+                const arena = document.getElementById('panel-game-arena');
+                arena.classList.add('animate-shake');
+                setTimeout(() => arena.classList.remove('animate-shake'), 400);
+            }
+
+            document.getElementById('combo-count').innerText = state.combo;
+        }
+
+        function showScorePopup(holeIndex, text, colorClass) {
+            const hole = document.getElementById(`mole-${holeIndex}`);
+            if (!hole) return;
+            const popup = document.createElement('div');
+            popup.className = `score-popup font-black text-xl sm:text-2xl drop-shadow-md ${colorClass}`;
+            popup.innerText = text;
+
+            const layer = document.getElementById('score-popup-layer');
+            if (layer) {
+                // 以被打到的洞為準定位（洞的水平中心、偏上方）
+                const holeBox = hole.parentElement.getBoundingClientRect();
+                const layerBox = layer.getBoundingClientRect();
+                popup.style.left = `${holeBox.left - layerBox.left + holeBox.width / 2}px`;
+                popup.style.top = `${holeBox.top - layerBox.top + holeBox.height * 0.2}px`;
+
+                layer.appendChild(popup);
+                setTimeout(() => popup.remove(), 800);
+            }
+        }
+
+        function triggerTicketToast() {
+            const toast = document.getElementById('toast-ticket');
+            if (!toast) return;
+            toast.classList.remove('-translate-y-20', 'opacity-0', 'pointer-events-none');
+            toast.classList.add('translate-y-0', 'opacity-100');
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('-translate-y-20', 'opacity-0', 'pointer-events-none');
+            }, 2000);
+        }
+
+        function updateStatsUI() {
+            document.getElementById('stat-score').innerText = state.score;
+
+            document.getElementById('stat-draws').innerText = state.tickets;
+            document.getElementById('gacha-spins-count').innerText = state.tickets;
+
+            const badgeAlert = document.getElementById('badge-draw-alert');
+            const btn1 = document.getElementById('btn-draw-1');
+            const btn10 = document.getElementById('btn-draw-10');
+
+            if (btn1) btn1.disabled = (state.tickets < 1);
+            if (btn10) btn10.disabled = (state.tickets < 9);
+
+            if (state.tickets > 0) {
+                badgeAlert.classList.remove('hidden');
+            } else {
+                badgeAlert.classList.add('hidden');
+            }
+
+            const uniqueCount = Object.keys(state.inventory).length;
+            document.getElementById('stat-collected-count').innerText = uniqueCount;
+            
+            const pct = Math.round((uniqueCount / 20) * 100);
+            document.getElementById('collection-progress-bar').style.width = `${pct}%`;
+            document.getElementById('collection-progress-text').innerText = `${pct}%`;
+        }
+
+        function rollGachaPrize() {
+            const rand = Math.random() * 100;
+            let pool;
+            if (rand < 5) {
+                pool = PRIZES.filter(p => p.rarity === 'SR');
+            } else if (rand < 35) {
+                pool = PRIZES.filter(p => p.rarity === 'R');
+            } else {
+                pool = PRIZES.filter(p => p.rarity === 'N');
+            }
+            return pool[Math.floor(Math.random() * pool.length)];
+        }
+
+        function playGacha(count) {
+            const cost = (count === 10) ? 9 : 1;
+            if (state.tickets < cost) return;
+
+            state.tickets -= cost;
+            audio.playGachaSpin();
+
+            const knob = document.getElementById('gacha-knob');
+            knob.style.transform = 'rotate(360deg)';
+            setTimeout(() => knob.style.transform = 'rotate(0deg)', 600);
+
+            const machine = document.getElementById('gacha-machine-body');
+            machine.classList.add('animate-gacha-shake');
+
+            setTimeout(() => {
+                machine.classList.remove('animate-gacha-shake');
+
+                const pulledPrizes = [];
+                let hasSR = false;
+
+                for (let i = 0; i < count; i++) {
+                    const prize = rollGachaPrize();
+                    pulledPrizes.push(prize);
+                    state.inventory[prize.id] = (state.inventory[prize.id] || 0) + 1;
+                    if (prize.rarity === 'SR') hasSR = true;
+                }
+
+                if (hasSR) audio.playWinSR();
+
+                saveData();
+                updateStatsUI();
+
+                showGachaModal(pulledPrizes);
+            }, 800);
+        }
+
+        function showGachaModal(prizes) {
+            const modal = document.getElementById('modal-gacha-result');
+            const card = document.getElementById('modal-gacha-card');
+            const container = document.getElementById('gacha-results-container');
+            const title = document.getElementById('result-modal-title');
+
+            container.innerHTML = '';
+
+            if (prizes.length === 1) {
+                const prize = prizes[0];
+                title.innerText = "🎉 恭喜獲得！";
+
+                let rarityBg = prize.rarity === 'SR' ? 'rarity-sr' : prize.rarity === 'R' ? 'rarity-r' : 'rarity-n';
+                let tagColor = prize.rarity === 'SR' ? 'bg-amber-500' : prize.rarity === 'R' ? 'bg-blue-500' : 'bg-slate-500';
+                let tagText = prize.rarity === 'SR' ? '⭐ SR 超級稀有 ⭐' : prize.rarity === 'R' ? '✨ R 高級 ✨' : '🔹 N 普通 🔹';
+
+                container.innerHTML = `
+                    <div class="space-y-3">
+                        <div class="w-32 h-32 mx-auto rounded-2xl flex items-center justify-center text-6xl shadow-xl ${rarityBg}">
+                            <span>${prize.icon}</span>
+                        </div>
+                        <div class="inline-block px-4 py-1 rounded-full font-black text-xs text-white uppercase tracking-wider ${tagColor} shadow-md">
+                            ${tagText}
+                        </div>
+                        <h3 class="font-black text-2xl text-slate-800">${prize.name}</h3>
+                        <p class="text-xs text-slate-500">${prize.desc}</p>
+                    </div>
+                `;
+            } else {
+                title.innerText = `🎉 10 連抽結果 (獲得 ${prizes.length} 個獎品！)`;
+
+                const grid = document.createElement('div');
+                grid.className = 'grid grid-cols-2 sm:grid-cols-5 gap-2.5 max-h-[60vh] overflow-y-auto p-1';
+
+                prizes.forEach(prize => {
+                    let rarityBg = prize.rarity === 'SR' ? 'rarity-sr' : prize.rarity === 'R' ? 'rarity-r' : 'bg-slate-100 border border-slate-300';
+                    let rarityBadge = prize.rarity === 'SR' ? 'bg-amber-500' : prize.rarity === 'R' ? 'bg-blue-500' : 'bg-slate-400';
+
+                    grid.innerHTML += `
+                        <div class="p-2 rounded-2xl ${rarityBg} flex flex-col items-center justify-between text-center shadow-sm relative">
+                            <span class="${rarityBadge} text-white font-black text-[9px] px-1.5 py-0.5 rounded-full absolute top-1 left-1">${prize.rarity}</span>
+                            <div class="text-3xl my-1">${prize.icon}</div>
+                            <div class="font-bold text-xs text-slate-800 truncate w-full">${prize.name}</div>
+                        </div>
+                    `;
+                });
+
+                container.appendChild(grid);
+            }
+
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                card.classList.remove('scale-95', 'opacity-0');
+                card.classList.add('scale-100', 'opacity-100');
+            }, 10);
+        }
+
+        function closeGachaModal() {
+            const modal = document.getElementById('modal-gacha-result');
+            const card = document.getElementById('modal-gacha-card');
+            card.classList.remove('scale-100', 'opacity-100');
+            card.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 200);
+        }
+
+        function filterCollection(rarity) {
+            document.querySelectorAll('.btn-filter').forEach(btn => {
+                btn.classList.remove('active', 'bg-amber-500', 'text-white');
+                btn.classList.add('bg-slate-100', 'text-slate-600');
+            });
+            if (window.event && window.event.target) {
+                window.event.target.classList.remove('bg-slate-100', 'text-slate-600');
+                window.event.target.classList.add('active', 'bg-amber-500', 'text-white');
+            }
+
+            renderCollectionGrid(rarity);
+        }
+
+        function renderCollectionGrid(filter) {
+            const grid = document.getElementById('collection-grid');
+            if (!grid) return;
+            grid.innerHTML = '';
+
+            const filteredPrizes = PRIZES.filter(p => filter === 'all' || p.rarity === filter);
+
+            filteredPrizes.forEach(prize => {
+                const count = state.inventory[prize.id] || 0;
+                const unlocked = count > 0;
+
+                const card = document.createElement('div');
+                card.className = `relative rounded-2xl p-3 text-center border-2 transition flex flex-col justify-between items-center ${
+                    unlocked 
+                        ? (prize.rarity === 'SR' ? 'bg-amber-50 border-amber-300 shadow-md' : prize.rarity === 'R' ? 'bg-blue-50 border-blue-200' : 'bg-slate-50 border-slate-200')
+                        : 'bg-slate-100 border-slate-200 opacity-60 grayscale'
+                }`;
+
+                let rarityBadgeColor = prize.rarity === 'SR' ? 'bg-amber-500' : prize.rarity === 'R' ? 'bg-blue-500' : 'bg-slate-400';
+
+                card.innerHTML = `
+                    <div class="w-full flex justify-between items-center text-[10px] mb-1">
+                        <span class="${rarityBadgeColor} text-white font-bold px-1.5 py-0.5 rounded-md">${prize.rarity}</span>
+                        ${unlocked ? `<span class="bg-red-500 text-white font-black px-1.5 py-0.5 rounded-full">x${count}</span>` : '<span class="text-slate-400">未解鎖</span>'}
+                    </div>
+
+                    <div class="text-4xl my-2">${unlocked ? prize.icon : '❓'}</div>
+
+                    <div class="w-full">
+                        <div class="font-bold text-xs ${unlocked ? 'text-slate-800' : 'text-slate-400'} truncate">${unlocked ? prize.name : '???'}</div>
+                        <div class="text-[10px] text-slate-400 truncate mt-0.5">${unlocked ? prize.desc : '尚待抽獎獲得'}</div>
+                    </div>
+                `;
+
+                grid.appendChild(card);
+            });
+        }
+    </script>
+</body>
+</html>
